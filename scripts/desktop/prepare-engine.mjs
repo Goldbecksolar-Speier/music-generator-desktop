@@ -65,7 +65,7 @@ export async function prepareEngine() {
 
 async function copyWindowsCrt() {
   const vswhere = path.join(process.env["ProgramFiles(x86)"] || "C:/Program Files (x86)","Microsoft Visual Studio/Installer/vswhere.exe");
-  const installation = execFileSync(vswhere,["-latest","-property","installationPath"],{encoding:"utf8"}).trim();
+  const installation = execFileSync(vswhere,["-latest","-products","*","-property","installationPath"],{encoding:"utf8"}).trim();
   const redistRoot = path.join(installation,"VC/Redist/MSVC");
   const versions=(await readdir(redistRoot)).filter(n=>/^\d/.test(n)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
   const candidates=await files(path.join(redistRoot,versions[0],"x64"));

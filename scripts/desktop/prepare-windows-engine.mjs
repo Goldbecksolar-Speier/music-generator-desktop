@@ -14,7 +14,7 @@ export function dllExports(text) {
 
 async function visualStudioTools() {
   const vswhere=path.join(process.env["ProgramFiles(x86)"] || "C:/Program Files (x86)","Microsoft Visual Studio/Installer/vswhere.exe");
-  const installation=execFileSync(vswhere,["-latest","-property","installationPath"],{encoding:"utf8"}).trim();
+  const installation=execFileSync(vswhere,["-latest","-products","*","-property","installationPath"],{encoding:"utf8"}).trim();
   const tools=path.join(installation,"VC/Tools/MSVC");
   const versions=(await readdir(tools)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
   return path.join(tools,versions[0],"bin/Hostx64/x64");
