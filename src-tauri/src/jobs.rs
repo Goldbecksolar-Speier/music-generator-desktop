@@ -75,14 +75,15 @@ pub async fn worker<R: Runtime>(state: Arc<AppState>, app: AppHandle<R>) {
             };
             // Existing installations lazily fetch only this shared model for blank titles.
             // Explicit titles require neither a title download nor title inference.
-            if state
-                .db
-                .song(&sid)?
-                .title
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .is_empty()
+            if !crate::remote::is_remote()
+                && state
+                    .db
+                    .song(&sid)?
+                    .title
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim()
+                    .is_empty()
             {
                 report_progress(&state, &app, &operation, Progress::new("title_download"));
                 crate::titles::install(
@@ -108,14 +109,15 @@ pub async fn worker<R: Runtime>(state: Arc<AppState>, app: AppHandle<R>) {
                     )
                     .await?
             };
-            if state
-                .db
-                .song(&sid)?
-                .title
-                .as_deref()
-                .unwrap_or("")
-                .trim()
-                .is_empty()
+            if !crate::remote::is_remote()
+                && state
+                    .db
+                    .song(&sid)?
+                    .title
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim()
+                    .is_empty()
             {
                 // Free resident music weights before loading the CPU-only text model.
                 state.stop_engine();

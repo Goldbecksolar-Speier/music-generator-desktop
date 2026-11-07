@@ -47,6 +47,9 @@ impl Engine {
         settings: &Settings,
         cancel: &CancellationToken,
     ) -> Result<Self> {
+        if let Some(remote) = crate::remote::config() {
+            return Self::connect_remote(remote, logs, settings, cancel).await;
+        }
         let binary = engine_path(resources);
         if !binary.is_file() {
             return Err(message(
@@ -97,10 +100,69 @@ impl Engine {
         })
     }
 
+    async fn connect_remote(
+        remote: crate::remote::Remote,
+        logs: &Path,
+        settings: &Settings,
+        cancel: &CancellationToken,
+    ) -> Result<Self> {
+        wait_remote(&remote.synth, cancel).await?;
+        if remote.lm != remote.synth {
+            wait_remote(&remote.lm, cancel).await?;
+        }
+        let client = EngineClient::new(
+            remote.synth,
+            remote.lm,
+            settings.poll_interval,
+            settings.timeout_minutes,
+        )?;
+        // No local process or log: the backend indicator stays at "not confirmed".
+        let backend = BackendSession::new(
+            BackendLog::capture(&logs.join("ace-server.log")),
+            None,
+            None,
+            false,
+        );
+        Ok(Self {
+            processes: Vec::new(),
+            client,
+            backend,
+        })
+    }
+
     pub fn alive(&mut self) -> bool {
         self.processes
             .iter_mut()
             .all(|p| p.alive().unwrap_or(false))
+    }
+}
+
+async fn wait_remote(url: &str, cancel: &CancellationToken) -> Result<()> {
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(3))
+        .build()?;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    loop {
+        if cancel.is_cancelled() {
+            return Err(Error::Cancelled);
+        }
+        let response = tokio::select! {
+            _ = cancel.cancelled() => return Err(Error::Cancelled),
+            response = client.get(format!("{url}/health")).send() => response,
+        };
+        if response.is_ok_and(|r| r.status().is_success()) {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return Err(message(format!(
+                "Remote engine not reachable at {url}. Is the SSH tunnel running and ace-server started?"
+            )));
+        }
+        tokio::select! {
+            _ = cancel.cancelled() => return Err(Error::Cancelled),
+            _ = tokio::time::sleep(Duration::from_millis(500)) => {},
+        }
     }
 }
 

@@ -67,6 +67,13 @@ impl Database {
         }
         let mut settings: Settings = serde_json::from_value(value)?;
         crate::catalog::restore_supported_profile(&mut settings)?;
+        if let Some(remote) = crate::remote::config() {
+            // Models live on the remote machine: skip the first-run assistant and the
+            // local hardware recommendation, and use the language model installed there.
+            settings.setup_complete = true;
+            settings.expert_mode = true;
+            settings.lm_model = remote.lm_model;
+        }
         if settings.models_dir.is_empty() {
             settings.models_dir = self.root.join("models").to_string_lossy().into();
         }

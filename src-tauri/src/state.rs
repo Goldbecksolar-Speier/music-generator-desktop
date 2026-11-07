@@ -53,7 +53,10 @@ impl AppState {
             return Err(message("Audio analysis is only available with ACE-Step. Choose ACE-Step in the ModelPicker"));
         }
         let cancel = operation.cancellation();
-        if settings.setup_complete && operation.kind() != OperationKind::Setup {
+        if settings.setup_complete
+            && operation.kind() != OperationKind::Setup
+            && !crate::remote::is_remote()
+        {
             let mut verifier = crate::verification::ModelVerifier::open(&self.db.root);
             if !crate::catalog::verify(
                 &crate::catalog::Selection::from_settings(settings),

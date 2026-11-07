@@ -17,11 +17,13 @@ pub fn generate(state: &AppState, mut request: GenerateRequest) -> Result<Vec<St
             .clone()
             .unwrap_or_else(|| Selection::from_settings(&settings));
         catalog::catalog().ensure_allowed(&selection, settings.expert_mode, Some(hardware))?;
-        if !catalog::cached(
-            &selection,
-            Path::new(&settings.models_dir),
-            &ModelVerifier::open(&state.db.root),
-        )? {
+        if !crate::remote::is_remote()
+            && !catalog::cached(
+                &selection,
+                Path::new(&settings.models_dir),
+                &ModelVerifier::open(&state.db.root),
+            )?
+        {
             return Err(message(
                 "Open the ModelPicker and download or verify the selected models first",
             ));

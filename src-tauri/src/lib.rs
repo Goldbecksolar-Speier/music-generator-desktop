@@ -26,6 +26,7 @@ pub mod phone_access;
 pub mod power;
 mod process_output;
 mod random_titles;
+pub mod remote;
 pub mod runtime;
 pub mod sandbox;
 pub mod setup;
